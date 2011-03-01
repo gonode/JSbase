@@ -6,7 +6,9 @@ var jOO = (function(undefined){
 	var _jOO = function(){
 	
 	};
-	
+	_jOO.enums = {
+		
+	}
 	return new _jOO();
 })();
 
@@ -14,16 +16,24 @@ var jOO = (function(undefined){
 	jOO.Class({
 		"namespace":"System",
 		"name":"Console",
-		"includes":[include1,include2,{
-			test:function(){}
-		}],
+		"includes":{
+			"static":[include1,include2,{
+				test:function(){}
+			}],
+			"prototype":[]
+		},
 		"implements":iFace,
 		"extends": oClass,
 		"properties":["Name"],
-		"members":["length"],
+		"fields":["length"],
 		"methods":{
 			"Write":function(){}
 		},
+		"constants":{
+			"PI":3.14
+		},
+		"constructor":function(){},
+		"destructor":function(){},
 		"success":function(){},
 		"error":function(){}
 	});
@@ -33,7 +43,7 @@ var jOO = (function(undefined){
 		"name":"IConsole",
 		"interface":{
 			"Write":"method",
-			"length":"member",
+			"length":"field",
 			"name":"property"
 		}
 	});
