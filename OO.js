@@ -18,9 +18,13 @@ var jOO = (function(undefined){
 		"name":"Console",
 		"includes":{
 			"static":[include1,include2,{
-				test:function(){}
+				test : function(){
+					
+				}
 			}],
-			"prototype":[]
+			"prototype":[{
+				empty : ""
+			}]
 		},
 		"implements":iFace,
 		"extends": oClass,
@@ -32,10 +36,18 @@ var jOO = (function(undefined){
 		"constants":{
 			"PI":3.14
 		},
-		"constructor":function(){},
-		"destructor":function(){},
-		"success":function(){},
-		"error":function(){}
+		"constructor":function(){
+			
+		},
+		"destructor":function(){
+			
+		},
+		"success":function(){
+			
+		},
+		"error":function(){
+			
+		}
 	});
 
 	jOO.Interface({
@@ -45,6 +57,15 @@ var jOO = (function(undefined){
 			"Write":"method",
 			"length":"field",
 			"name":"property"
+		},
+		"success":function(){
+			
+		},
+		"error":function(){
+			
+		},
+		"implement":function(){
+			
 		}
 	});
 })(jOO);
