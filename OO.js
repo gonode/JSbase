@@ -5,11 +5,28 @@ var oClass;
 var jOO = (function(undefined){
 	var _jOO = function(){
 	
-	};
-	_jOO.enums = {
+		var objects = [];
+		var namespaces = [];
+		var length = 0;
 		
-	}
-	return new _jOO();
+		var Class = function(base){
+			var c = {};
+			return c;
+		}
+		
+		
+		return {
+			length:length,
+			Class:Class,
+			Interface:Interface,
+			getClassesByNameSpace:getClassesByNameSpace,
+			getClassesByName:getClassesByName,
+			getNameSpaces:getNameSpaces,
+			getInterFacesByNameSpace:getInterFacesByNameSpace,
+			getInterFacesByName:getInterFacesByName
+		}
+	};
+	return _jOO();
 })();
 
 (function(jOO,undefined){
