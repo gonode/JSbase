@@ -15,6 +15,7 @@ var jOO = (function(undefined){
 		}
 		
 		
+		
 		return {
 			length:length,
 			Class:Class,
@@ -40,12 +41,37 @@ var jOO = (function(undefined){
 				}
 			}],
 			"prototype":[{
-				empty : ""
+				"empty" : ""
 			}]
 		},
-		"implements":iFace,
+		"implements":[iFace],
 		"extends": oClass,
-		"properties":["Name"],
+		"properties":[{
+				"name":"Name"
+				"get":true,
+				"set":true
+			},
+			{
+				"name":"Key",
+				"set":true,
+				"get":false
+			},
+			{
+				"name":"Files",
+				"set":function(file){
+					
+				},
+				"get":"files"
+			},
+			{
+				"name":"Chars",
+				"set":function(char){
+				
+				},
+				"get":function(index){
+					
+				}
+		}],
 		"fields":["length"],
 		"methods":{
 			"Write":function(){}
