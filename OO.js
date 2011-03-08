@@ -9,19 +9,19 @@ var jOO = (function(undefined){
 		var errors = [];
 		var warnings = [];
 
-		var Class = {
+		var _class = {
 			Create : function(base){
 				var nameSpace = base["namespace"];
 				var className = base["name"];
-				var currentNamespace = this.CreateNameSpaces(nameSpace, onerror);
-				var currentClass = currentNamespace[className];
-				var classExists = typeof currentClass === "undefined";
+				var currentNamespace = _class.CreateNameSpaces(nameSpace, onerror);
+				var currentClass;
+				var classNotExists = typeof currentNamespace[className] === "undefined";
 				if (currentNamespace === root){
 					Error.setWarning("You should use a NameSpace to separate your Classes. Class: \""+className+"\".");
 				}
-				if(!classExists){
-					currentClass = currentNamespace[className] = {};
-					var constructor = base["constructor"];//COMPLETE
+				if(classNotExists){
+					//currentClass = currentNamespace[className] = function(){};
+					var Constructor = base["constructor"];//COMPLETE
 					var includes = base["includes"];//
 					var interfaces = base["implements"];//
 					var extension = base["extends"];//COMPLETE
@@ -33,45 +33,52 @@ var jOO = (function(undefined){
 					var onerror = base["error"];//COMPLETE
 					var onsuccess = base["succcess"];
 					
-					this.SetConstructor(currentClass,className,constructor, onerror);//COMPLETE
-					this.IncludeObjectsInClass(currentClass,includes, onerror);//
-					this.ExtendClass(currentClass,extension, onerror);//COMPLETE					
-					this.SetDefaults(currentClass,base, onerror);//COMPLETE
-					this.SetConstants(currentClass,properties,onerror);//COMPLETE
-					this.SetProperties(currentClass,properties,onerror);//COMPLETE
-					this.SetFields(currentClass,fields,onerror);//COMPLETE
-					this.SetMethods(currentClass,methods,onerror);//COMPLETE
-					this.SetDestructor(currentClass,destructor,onerror);//COMPLETE
-					this.VerifyInterfacesImplementations(currentClass,interfaces, onerror);//
+					if(typeof Constructor !== "function"){
+						Constructor = new Function();
+						Error.setWarning("Class "+className+" does not have a Constructor. Using a default one.");
+					}
+					currentClass = Constructor;
+					
+					//_class.SetConstructor(currentClass,className,Constructor, onerror);//COMPLETE
+					_class.IncludeObjectsInClass(currentClass,includes, onerror);//
+					_class.ExtendClass(currentClass,extension, onerror);//COMPLETE					
+					_class.SetDefaults(currentClass,base, onerror);//COMPLETE
+					_class.SetConstants(currentClass,constants,onerror);//COMPLETE
+					_class.SetProperties(currentClass,properties,onerror);//COMPLETE
+					_class.SetFields(currentClass,fields,onerror);//COMPLETE
+					_class.SetMethods(currentClass,methods,onerror);//COMPLETE
+					_class.SetDestructor(currentClass,destructor,onerror);//COMPLETE
+					_class.VerifyInterfacesImplementations(currentClass,interfaces, onerror);//
+					currentNamespace[className] = currentClass;
 				}
 				else{
 					Error.setError("Class "+className+" already exists in NameSpace "+nameSpace+".", onerror);
 				}
 			},
-			SetConstructor : function(Class,name,constructor,onerror){
-				if(typeof constructor !== "function"){
-					constructor = new Function();
+			SetConstructor : function(Class,name,Constructor,onerror){
+				if(typeof Constructor !== "function"){
+					Constructor = new Function();
 					Error.setWarning("Class "+name+" does not have a Constructor. Using a default one.");
 				}
-				Class = constructor;
+				Class = Constructor;
 			},
 			SetDestructor : function(Class,destructor,onerror){
 				if(typeof Class["prototype"]["Dispose"] === "undefined"){
-					Class["prototype"]["Dispose"] = function(){
-						this = undefined;
-					}
+					Class["prototype"]["Dispose"] = new Function(
+						"this = undefined;"
+					);
 					Error.setMessage("Using a Default Destructor Method for Class \""+Class.$GetType+"\".");
 				}
 			},
 			SetMethods : function(Class,methods,onerror){
 				for(var method in methods){
-					this.SetMethod(Class,method,methods[method],onerror);
+					_class.SetMethod(Class,method,methods[method],onerror);
 				}
 			},
 			SetMethod : function(Class,name,method,onerror){
 				Class["prototype"][name] = method;
 			},
-			SetFields = function(Class,fields,onerror){
+			SetFields : function(Class,fields,onerror){
 				
 				for(var i = 0;i < fields.length;i+=1){
 					Class["prototype"][fields[i]] = null;
@@ -82,12 +89,15 @@ var jOO = (function(undefined){
 				var namespace = base.namespace;
 				var name = base.name;
 				var type = (typeof namespace === "undefined" || namespace.length === 0 ? "" : namespace + ".") + name;
-				var GetType = function(){
-					return this["$__type__"];
-				}
-				var GetNameSpace = function(){
-					return this["$__namespace__"];
-				}
+				var GetType = new Function(
+					"return this['$__type__'];"
+				);
+				var GetNameSpace = new Function(
+					"return this['$__namespace__'];"
+				);
+				var GetName = new Function(
+					"return this['$__name__'];"
+				);
 				Class["prototype"]["$GetType"] = GetType;
 				Class["prototype"]["$__type__"] = type;
 				Class["prototype"]["$GetName"] = GetName;
@@ -107,19 +117,15 @@ var jOO = (function(undefined){
 				}
 			},
 			SetProperties : function(Class,properties, onerror){
-				if(properties instanceof Array){
-					for(var i = 0;i < properties; i+=1){
+				var isArray = (properties instanceof Array);
+				if(isArray){//if(properties && !(properties.propertyIsEnumerable('length')) && typeof properties === 'object' && typeof properties.length === 'number'){//if(properties.constructor === Array){//if(properties instanceof Array){
+					for(var i = 0;i < properties.length; i+=1){
 						var property = properties[i];
 						if(typeof property === "object"){
-							this.SetProperty(Class,{
-								"name":property["name"],
-								"get":property["get"],
-								"set":property["set"],
-								"getset":property["getset"]
-							},onerror);
+							_class.SetPropertiesObject(Class,property,onerror);
 						}
 						else if(typeof property === "string"){
-							this.SetProperty(Class,{
+							_class.SetProperty(Class,{
 								"name":property,
 								"get":true,
 								"set":true
@@ -128,8 +134,12 @@ var jOO = (function(undefined){
 					}
 				}
 				else if(properties instanceof Object){
+					_class.SetPropertiesObject(Class,properties,onerror);
+				}
+			},
+			SetPropertiesObject : function(Class,properties,onerror){
 					if(("get" in properties) || ("set" in properties) || ("getset" in properties)){
-						this.SetProperty(Class,{
+						_class.SetProperty(Class,{
 							"name":properties["name"],
 							"get":properties["get"],
 							"set":properties["set"],
@@ -138,15 +148,14 @@ var jOO = (function(undefined){
 					}
 					else{
 						for(var name in properties){
-							this.SetProperty({
+							_class.SetProperty(Class,{
 								"name":name,
 								"get":properties[name]["get"],
 								"set":properties[name]["set"],
 								"getset":properties[name]["getset"]
-							});
+							},onerror);
 						}
 					}
-				}
 			},
 			SetProperty : function(Class,property, onerror){
 				var Name = property["name"];
@@ -167,35 +176,35 @@ var jOO = (function(undefined){
 						Class["prototype"][Field] = null;
 						if(typeof Get !== "undefined"){
 							if(Get === true){
-								this.SetMethod(Class,"get"+Name,new Function(
+								_class.SetMethod(Class,"get"+Name,new Function(
 									"return this["+Field+"];"
 								),onerror);
 							}
 							else if(typeof Get === "function"){
-								this.SetMethod(Class,"get"+Name,Get,onerror);
+								_class.SetMethod(Class,"get"+Name,Get,onerror);
 							}
 						}
 						if(typeof Set !== "undefined"){
 							if(Set === true){
-								this.SetMethod(Class,"set"+Name,new Function(
+								_class.SetMethod(Class,"set"+Name,new Function(
 									"value",
 									"this[" + Field + "] = value;"
 								),onerror);
 							}
 							else if(typeof Set === "function"){
-								this.SetMethod(Class,"set"+Name,Set,onerror);
+								_class.SetMethod(Class,"set"+Name,Set,onerror);
 							}
 						}
 						if(typeof GetSet !== "undefined"){
 							if(GetSet === true){
-								this.SetMethod(Class,Name,new Function(
+								_class.SetMethod(Class,Name,new Function(
 									"value",
 									"return typeof value === 'undefined' ? this["+Field+"] : this[" + Field + "] = value;"
 								),onerror);
 							}
 							else if(typeof GetSet === "function"){
 								Class["prototype"][Name] = GetSet;
-								this.SetMethod(Class,Name,GetSet,onerror);
+								_class.SetMethod(Class,Name,GetSet,onerror);
 							}
 						}
 					}
@@ -208,15 +217,17 @@ var jOO = (function(undefined){
 				}
 			},
 			ExtendClass : function(Class,extension, onerror){
-				if(typeof extension === "function"){
-					
-					extension = extension();
+				if(typeof extension !== "undefined"){
+					if(typeof extension === "function"){
+						
+						extension = extension();
+					}
+					Class["prototype"] = extension;
 				}
-				Class["prototype"] = extension;
 			},
 			IncludeObjectsInClass : function(Class,includes, onerror){
 				if(typeof includes === "undefined"){
-					Error.setMessage("No Includes were set to the Class "+Class.$GetName()+" in NameSpace "+Class.$GetNameSpace()+".");
+					Error.setMessage("No Includes were set to the Class \""+Class.$GeType()+"\".");
 				}
 				
 			},
@@ -258,16 +269,17 @@ var jOO = (function(undefined){
 		}
 		
 		return {
+			root:root,/*COMENTAR ASSIM QUE TERMINAR DE TESTAR*/
+			Class:_class.Create/*,
 			getErrors:getErrors,
 			throwerrors:throwerrors,
 			length:length,
-			Class:Class.Create,
 			Interface:Interface,
 			getClassesByNameSpace:getClassesByNameSpace,
 			getClassesByName:getClassesByName,
 			getNameSpaces:getNameSpaces,
 			getInterFacesByNameSpace:getInterFacesByNameSpace,
-			getInterFacesByName:getInterFacesByName
+			getInterFacesByName:getInterFacesByName*/
 		}
 	};
 	return _jOO();
@@ -295,7 +307,7 @@ var oClass;
 		"implements":[iFace],
 		"extends": oClass,
 		"properties":[{
-				"name":"Name"
+				"name":"Name",
 				"get":true,
 				"set":true
 			},
@@ -345,7 +357,7 @@ var oClass;
 			"PI":3.14
 		},
 		"constructor":function(){
-			
+			alert("ok!");
 		},
 		"destructor":function(){
 			
@@ -357,7 +369,7 @@ var oClass;
 			
 		}
 	});
-
+/*
 	jOO.Interface({
 		"namespace":"System",
 		"name":"IConsole",
@@ -376,4 +388,7 @@ var oClass;
 			
 		}
 	});
+*/
 })(jOO);
+
+alert(jOO.root);
