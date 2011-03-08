@@ -1,3 +1,24 @@
+/*
+**	"Creative Commons" License
+** 	Script to ease the creation of "Classes" in JavaScript in order to create objects of them.
+**	2011
+**	João Alves de Souza Neto
+**	
+**	Read: http://creativecommons.org/licenses/by-nc-sa/3.0/
+**
+**	You are free:
+**
+**		* to Share — to copy, distribute and transmit the work
+**		* to Remix — to adapt the work
+**
+**	Under the following conditions:
+**
+**		* Attribution — You must attribute the work in the manner specified by the author or licensor (but not in any way that suggests that they endorse you or your use of the work).
+**		* Noncommercial — You may not use this work for commercial purposes.
+**		* Share Alike — If you alter, transform, or build upon this work, you may distribute the resulting work only under the same or similar license to this one. 
+**
+*/
+
 var jOO = (function(undefined){
 	var _jOO = function(){
 	
@@ -8,12 +29,32 @@ var jOO = (function(undefined){
 		var throwerrors = false;
 		var errors = [];
 		var warnings = [];
-
+		
+		var _namespace = {
+			CreateNameSpaces : function(namespace, onerror){
+				if(typeof namespace !== "undefined" && namespace.length !== 0){
+					var namespaces = namespace.split(".");
+					var length = namespaces.length;			
+					var currentnamespace = root;
+					for(var i = 0;i<length;i+=1){
+						currentnamespace = (currentnamespace[namespaces[i]] === undefined ? (currentnamespace[namespaces[i]] = {}) : currentnamespace[namespaces[i]]);
+						if(currentnamespace === ""){
+							Error.setError("The NameSpace you tried to create is a empty one. The NameSpace you tried to create was \""+namespace+"\".")
+						}
+					}
+					return currentnamespace;
+				}
+				else{
+					return root;
+				}
+			}
+		}
+		
 		var _class = {
 			Create : function(base){
 				var nameSpace = base["namespace"];
 				var className = base["name"];
-				var currentNamespace = _class.CreateNameSpaces(nameSpace, onerror);
+				var currentNamespace = _namespace.CreateNameSpaces(nameSpace, onerror);
 				var currentClass;
 				var classNotExists = typeof currentNamespace[className] === "undefined";
 				if (currentNamespace === root){
@@ -106,6 +147,14 @@ var jOO = (function(undefined){
 					Class["prototype"]["$GetNameSpace"] = GetNameSpace;
 					Class["prototype"]["$__namespace__"] = namespace;
 				}
+				Class["$GetType"] = GetType;
+				Class["$__type__"] = type;
+				Class["$GetName"] = GetName;
+				Class["$__name__"] = name;
+				if(type !== base["name"]){
+					Class["$GetNameSpace"] = GetNameSpace;
+					Class["$__namespace__"] = namespace;
+				}
 			},
 			SetConstants : function(Class,constants,onerror){
 				for(var constant in constants){
@@ -177,7 +226,7 @@ var jOO = (function(undefined){
 						if(typeof Get !== "undefined"){
 							if(Get === true){
 								_class.SetMethod(Class,"get"+Name,new Function(
-									"return this["+Field+"];"
+									"return this['"+Field+"'];"
 								),onerror);
 							}
 							else if(typeof Get === "function"){
@@ -188,7 +237,7 @@ var jOO = (function(undefined){
 							if(Set === true){
 								_class.SetMethod(Class,"set"+Name,new Function(
 									"value",
-									"this[" + Field + "] = value;"
+									"this['" + Field + "'] = value;"
 								),onerror);
 							}
 							else if(typeof Set === "function"){
@@ -199,7 +248,7 @@ var jOO = (function(undefined){
 							if(GetSet === true){
 								_class.SetMethod(Class,Name,new Function(
 									"value",
-									"return typeof value === 'undefined' ? this["+Field+"] : this[" + Field + "] = value;"
+									"return typeof value === 'undefined' ? this['"+Field+"'] : this['" + Field + "'] = value;"
 								),onerror);
 							}
 							else if(typeof GetSet === "function"){
@@ -239,23 +288,12 @@ var jOO = (function(undefined){
 			},
 			IncludeObjectInClass : function(Class,include,Static, onerror){
 				return true;
-			},
-			CreateNameSpaces : function(namespace, onerror){
-				if(typeof namespace !== "undefined" && namespace.length !== 0){
-					var namespaces = namespace.split(".");
-					var length = namespaces.length;			
-					var currentnamespace = root;
-					for(var i = 0;i<length;i+=1){
-						currentnamespace = (currentnamespace[namespaces[i]] === undefined ? (currentnamespace[namespaces[i]] = {}) : currentnamespace[namespaces[i]]);
-						if(currentnamespace === ""){
-							Error.setError("The NameSpace you tried to create is a empty one. The NameSpace you tried to create was \""+namespace+"\".")
-						}
-					}
-					return currentnamespace;
-				}
-				else{
-					return root;
-				}
+			}
+		}
+		
+		var _interface = {
+			Create : function(base){
+				
 			}
 		}
 		
@@ -270,11 +308,11 @@ var jOO = (function(undefined){
 		
 		return {
 			root:root,/*COMENTAR ASSIM QUE TERMINAR DE TESTAR*/
-			Class:_class.Create/*,
-			getErrors:getErrors,
+			Class:_class.Create,
+			/*getErrors:getErrors,
 			throwerrors:throwerrors,
-			length:length,
-			Interface:Interface,
+			length:length,*/
+			Interface:_interface.Create/*,
 			getClassesByNameSpace:getClassesByNameSpace,
 			getClassesByName:getClassesByName,
 			getNameSpaces:getNameSpaces,
@@ -369,7 +407,7 @@ var oClass;
 			
 		}
 	});
-/*
+
 	jOO.Interface({
 		"namespace":"System",
 		"name":"IConsole",
@@ -388,7 +426,10 @@ var oClass;
 			
 		}
 	});
-*/
+
 })(jOO);
 
 alert(jOO.root);
+var Console = new jOO.root.System.Util.Console();
+alert(Console.$GetType());
+alert(jOO.root.System.Util.Console.$GetType());
