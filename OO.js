@@ -30,6 +30,15 @@ var jOO = (function(undefined){
 		var errors = [];
 		var warnings = [];
 		
+		var _constants = {
+			"get_prefix":"get",
+			"set_prefix":"set",
+			"constant_prefix":"$__",
+			"constant_suffix":"__",
+			"private_prefix":"__",
+			"private_suffix":"__"
+		}
+		
 		var _namespace = {
 			CreateNameSpaces : function(namespace, onerror){
 				if(typeof namespace !== "undefined" && namespace.length !== 0){
@@ -54,6 +63,7 @@ var jOO = (function(undefined){
 			Create : function(base){
 				var nameSpace = base["namespace"];
 				var className = base["name"];
+				var onerror = base["error"];//COMPLETE
 				var currentNamespace = _namespace.CreateNameSpaces(nameSpace, onerror);
 				var currentClass;
 				var classNotExists = typeof currentNamespace[className] === "undefined";
@@ -71,14 +81,20 @@ var jOO = (function(undefined){
 					var methods = base["methods"];//COMPLETE
 					var constants = base["constants"];//COMPLETE
 					var destructor = base["destructor"];//COMPLETE
-					var onerror = base["error"];//COMPLETE
-					var onsuccess = base["succcess"];
+					var onsuccess = base["success"];
 					
 					if(typeof Constructor !== "function"){
 						Constructor = new Function();
 						Error.setWarning("Class "+className+" does not have a Constructor. Using a default one.");
 					}
 					currentClass = Constructor;
+					
+					if(typeof onerror === "undefined"){
+						onerror = function(){};
+					}
+					if(typeof onsuccess === "undefined"){
+						onsuccess = function(){};
+					}
 					
 					//_class.SetConstructor(currentClass,className,Constructor, onerror);//COMPLETE
 					_class.IncludeObjectsInClass(currentClass,includes, onerror);//
@@ -91,6 +107,7 @@ var jOO = (function(undefined){
 					_class.SetDestructor(currentClass,destructor,onerror);//COMPLETE
 					_class.VerifyInterfacesImplementations(currentClass,interfaces, onerror);//
 					currentNamespace[className] = currentClass;
+					onsuccess();
 				}
 				else{
 					Error.setError("Class "+className+" already exists in NameSpace "+nameSpace+".", onerror);
@@ -130,38 +147,46 @@ var jOO = (function(undefined){
 				var namespace = base.namespace;
 				var name = base.name;
 				var type = (typeof namespace === "undefined" || namespace.length === 0 ? "" : namespace + ".") + name;
+				
+				var typeField = _constants["constant_prefix"]+"type"+_constants["constant_sufix"];
+				var nameField = _constants["constant_prefix"]+"name"+_constants["constant_sufix"];
+				var nameSpaceField = _constants["constant_prefix"]+"namespace"+_constants["constant_sufix"];
+				var typeMethod = "$GetType";
+				var nameMethod = "$GetName";
+				var nameSpaceMethod = "$GetNameSpace";
+				
 				var GetType = new Function(
-					"return this['$__type__'];"
-				);
-				var GetNameSpace = new Function(
-					"return this['$__namespace__'];"
+					"return this['"+typeField+"'];"
 				);
 				var GetName = new Function(
-					"return this['$__name__'];"
+					"return this['"+nameField+"'];"
 				);
-				Class["prototype"]["$GetType"] = GetType;
-				Class["prototype"]["$__type__"] = type;
-				Class["prototype"]["$GetName"] = GetName;
-				Class["prototype"]["$__name__"] = name;
+				var GetNameSpace = new Function(
+					"return this['"+nameSpaceField+"'];"
+				);
+				Class["prototype"][typeMethod] = GetType;
+				Class["prototype"][typeField] = type;
+				Class["prototype"][nameMethod] = GetName;
+				Class["prototype"][nameField] = name;
 				if(type !== base["name"]){
-					Class["prototype"]["$GetNameSpace"] = GetNameSpace;
-					Class["prototype"]["$__namespace__"] = namespace;
+					Class["prototype"][nameSpaceMethod] = GetNameSpace;
+					Class["prototype"][nameSpaceField] = namespace;
 				}
-				Class["$GetType"] = GetType;
-				Class["$__type__"] = type;
-				Class["$GetName"] = GetName;
-				Class["$__name__"] = name;
+				Class[typeMethod] = GetType;
+				Class[typeField] = type;
+				Class[nameMethod] = GetName;
+				Class[nameField] = name;
 				if(type !== base["name"]){
-					Class["$GetNameSpace"] = GetNameSpace;
-					Class["$__namespace__"] = namespace;
+					Class[nameSpaceMethod] = GetNameSpace;
+					Class[nameSpaceField] = namespace;
 				}
 			},
 			SetConstants : function(Class,constants,onerror){
 				for(var constant in constants){
-					var cname = "__"+constant+"__";
+					var cname = _constants["constant_prefix"]+constant+_constants["constant_suffix"];
 					Class["prototype"][cname] = constants[constant];
 					Class["prototype"][constant] = new Function(
-						"return this[" + cname + "];"
+						"return this['" + cname + "'];"
 					);
 				}
 			},
@@ -221,27 +246,29 @@ var jOO = (function(undefined){
 					var Set = property["set"];
 					var GetSet = property["getset"];
 					if(typeof Get !== "undefined" || typeof Set !== "undefined" || typeof GetSet !== "undefined"){
-						var Field = "__" + Name + "__";
+						var Field = _constants["private_prefix"] + Name + _constants["private_suffix"];
 						Class["prototype"][Field] = null;
 						if(typeof Get !== "undefined"){
+							var getter = _constants["get_prefix"]+Name;
 							if(Get === true){
-								_class.SetMethod(Class,"get"+Name,new Function(
+								_class.SetMethod(Class,getter,new Function(
 									"return this['"+Field+"'];"
 								),onerror);
 							}
 							else if(typeof Get === "function"){
-								_class.SetMethod(Class,"get"+Name,Get,onerror);
+								_class.SetMethod(Class,getter,Get,onerror);
 							}
 						}
 						if(typeof Set !== "undefined"){
+							var setter = _constants["set_prefix"]+Name;
 							if(Set === true){
-								_class.SetMethod(Class,"set"+Name,new Function(
+								_class.SetMethod(Class,setter,new Function(
 									"value",
 									"this['" + Field + "'] = value;"
 								),onerror);
 							}
 							else if(typeof Set === "function"){
-								_class.SetMethod(Class,"set"+Name,Set,onerror);
+								_class.SetMethod(Class,setter,Set,onerror);
 							}
 						}
 						if(typeof GetSet !== "undefined"){
@@ -293,6 +320,35 @@ var jOO = (function(undefined){
 		
 		var _interface = {
 			Create : function(base){
+				var nameSpace = base["namespace"];
+				var interfaceName = base["name"];
+				var onerror = base["error"];//COMPLETE
+				var currentNamespace = _namespace.CreateNameSpaces(nameSpace, onerror);
+				var interfaceNotExists = typeof currentNamespace[interfaceName] === "undefined";
+				if (currentNamespace === root){
+					Error.setWarning("You should use a NameSpace to separate your Classes. Class: \""+className+"\".");
+				}
+				if(interfaceNotExists){
+					var currentInterface ={};
+					var interfaceBody = base["interface"];					
+					var onsuccess = base["success"];
+					var onimplement = base["implement"];
+					
+					currentNamespace[interfaceName] = currentInterface;
+					onsuccess();
+				}
+				else{
+					Error.setError("Interface "+interfaceName+" already exists in NameSpace "+nameSpace+".", onerror);
+				}
+			},
+			InterfaceMethod : function(Interface,method,onerror){
+				
+			},
+			InterfaceProperty : function(Interface,property,onerror){
+				var possible_prefix = ["get","Get",""];
+				var possible_prefix = ["set","Set",""];
+			},
+			InterfaceField : function(Interface,field,onerror){
 				
 			}
 		}
