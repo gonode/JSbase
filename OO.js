@@ -38,13 +38,15 @@ var jOO = (function(undefined){
 			"constant_suffix":"__",
 			"private_prefix":"__",
 			"private_suffix":"__",
-			"interface_properties_name":"$__properties__",
-			"interface_methods_name":"$__methods__",
-			"interface_fields_name":"$__fields__",
+			"interface_properties_name":"properties",
+			"interface_methods_name":"methods",
+			"interface_fields_name":"fields",
 			"interface_implementation_tester":"IsImplemented",
 			"interface_test_for_methods":"$__TestForMethods",
 			"interface_test_for_properties":"$__TestForProperties",
-			"interface_test_for_fields":"$__TestForFields"
+			"interface_test_for_fields":"$__TestForFields",
+			"class_base_type":"Class",
+			"interface_base_type":"Interface"
 		}
 		
 		var _namespace = {
@@ -105,17 +107,21 @@ var jOO = (function(undefined){
 					}
 					
 					//_class.SetConstructor(currentClass,className,Constructor, onerror);//COMPLETE
-					_class.IncludeObjectsInClass(currentClass,includes, onerror);//
-					_class.ExtendClass(currentClass,extension, onerror);//COMPLETE					
+					(typeof includes !== "undefined" && _class.IncludeObjectsInClass(currentClass,includes, onerror));//COMPLETE
+					(typeof extension !== "undefined" && _class.ExtendClass(currentClass,extension, onerror));//COMPLETE
 					_class.SetDefaults(currentClass,base, onerror);//COMPLETE
-					_class.SetConstants(currentClass,constants,onerror);//COMPLETE
-					_class.SetProperties(currentClass,properties,onerror);//COMPLETE
-					_class.SetFields(currentClass,fields,onerror);//COMPLETE
-					_class.SetMethods(currentClass,methods,onerror);//COMPLETE
-					_class.SetDestructor(currentClass,destructor,onerror);//COMPLETE
-					_class.VerifyInterfacesImplementations(currentClass,interfaces, onerror);//
+					(typeof constants !== "undefined" && _class.SetConstants(currentClass,constants,onerror));//COMPLETE
+					(typeof properties !== "undefined" && _class.SetProperties(currentClass,properties,onerror));//COMPLETE
+					(typeof fields !== "undefined" && _class.SetFields(currentClass,fields,onerror));//COMPLETE
+					(typeof methods !== "undefined" && _class.SetMethods(currentClass,methods,onerror));//COMPLETE
+					(typeof destructor !== "undefined" && _class.SetDestructor(currentClass,destructor,onerror));//COMPLETE
+					(typeof interfaces !== "undefined" && _class.VerifyInterfacesImplementations(currentClass,interfaces, onerror));//COMPLETE
+
 					currentNamespace[className] = currentClass;
-					onsuccess();
+					
+					(typeof onsuccess === "function" && onsuccess());
+					
+					return currentNamespace[className];
 				}
 				else{
 					Error.setError("Class "+className+" already exists in NameSpace "+nameSpace+".", onerror);
@@ -159,11 +165,13 @@ var jOO = (function(undefined){
 				var nameSpace = base["namespace"];
 				var name = base["name"];
 				var type = (typeof namespace === "undefined" || namespace.length === 0 ? "" : namespace + ".") + name;
+				var baseType = _constants["class_base_type"];
 				
 				var defaults = {
 					"$GetType" : type,
 					"$GetName" : name,
-					"$GetNameSpace" : nameSpace
+					"$GetNameSpace" : nameSpace,
+					"$GetBaseType" : baseType
 				};
 				for(var Default in defaults){
 					_class.SetConstant(Class,Default,defaults[Default],true,onerror);
@@ -313,7 +321,7 @@ var jOO = (function(undefined){
 			},
 			VerifyInterfacesImplementations : function(Class,interfaces, onerror){
 				for(var Interface in interfaces){
-					if(!IsInterfaceImplemented(Class,Interface,onerror){
+					if(!IsInterfaceImplemented(Class,Interface,onerror) || Interface.GetBaseType() !== _constants["interface_base_type"]){
 						Error.setError("The Interface \""+Interface.$GeType()+"\" was not correctly implemented in the Class \""+Class.$GeType()+"\".");
 					}
 				}
@@ -352,21 +360,31 @@ var jOO = (function(undefined){
 					
 					_interface.SetDefaults(currentInterface,base);
 					
-					for(i = 0; i < methods.length; i+=1){
-						_interface.InterfaceMethod(currentInterface,methods[i],onerror);
+					if(typeof methods !== "undefined"){
+						for(i = 0; i < methods.length; i+=1){
+							_interface.InterfaceMethod(currentInterface,methods[i],onerror);
+						}
 					}
 					
-					for(i = 0; i < properties.length; i+=1){
-						_interface.InterfaceProperty(currentInterface,properties[i],onerror);
+					if(typeof properties !== "undefined"){
+						for(i = 0; i < properties.length; i+=1){
+							_interface.InterfaceProperty(currentInterface,properties[i],onerror);
+						}
 					}
 					
-					for(i = 0; i < fields.length; i+=1){
-						_interface.InterfaceField(currentInterface,fields[i],onerror);
+					if(typeof fields !== "undefiend"){
+						for(i = 0; i < fields.length; i+=1){
+							_interface.InterfaceField(currentInterface,fields[i],onerror);
+						}
 					}
 					
 					_interface.SetImplementationTester(currentInterface,base);
+					
 					currentNamespace[interfaceName] = currentInterface;
-					onsuccess();
+					
+					(typeof onsuccess === "function" && onsuccess());
+					
+					return currentNamespace[interfaceName];
 				}
 				else{
 					Error.setError("Interface "+interfaceName+" already exists in NameSpace "+nameSpace+".", onerror);
@@ -377,12 +395,12 @@ var jOO = (function(undefined){
 			},
 			InterfaceProperty : function(Interface,property,onerror){
 				Interface[_constants["interface_properties_name"]][property] = {
-					"methods" : {
+					//"methods" : {
 						"get" : _constants["get_prefix"]+property,
 						"set" : _constants["set_prefix"]+property,
 						"getset" : _constant["getset_prefix"]+property
-					},
-					"field" : _constants["private_prefix"]+property+_constants["private_suffix"]
+					//},
+					//"field" : _constants["private_prefix"]+property+_constants["private_suffix"]
 				}
 			},
 			InterfaceField : function(Interface,field,onerror){
@@ -392,11 +410,13 @@ var jOO = (function(undefined){
 				var nameSpace = base["namespace"];
 				var name = base["name"];
 				var type = (typeof namespace === "undefined" || namespace.length === 0 ? "" : namespace + ".") + name;
+				var baseType = _constants["interface_base_type"];
 				
 				var defaults = {
 					"$GetType" : type,
 					"$GetName" : name,
-					"$GetNameSpace" : nameSpace
+					"$GetNameSpace" : nameSpace,
+					"$GetBaseType" : baseType
 				};
 				for(var Default in defaults){
 					_class.SetConstant(Interface,Default,defaults[Default],true,onerror);
@@ -447,13 +467,138 @@ var jOO = (function(undefined){
 				);				
 			},
 			TestForMethods : function(Interface,Class){
+				var methods = Interface[_constants["interface_methods_name"]];
+				var implementedMethods = [];
+				var notImplementedMethods = [];
 				
+				for(var method in methods){
+					var isImplemented = false;
+					for(var member in Class){
+						if(method === member && typeof Class[member] === "function"){
+							isImplemented = true;
+							break;
+						}
+					}
+					if(!isImplemented){
+						implementedMethods.push(method);
+					}
+					else{
+						notImplementedMethods.push(method);
+					}
+				}
+				
+				if(notImplementedMethods.length === 0){
+					var errorMessage;
+					var interfaceType = Interface.$GetType();
+					var classType = Class.$GetType();
+					
+					errorMessage = "The following methods were not [correctly] implemented in the Class \"" + Class.$GetType() + "\" from the Interface \"" + Interface.$GetType() + "\":\n";
+					for(var method in notImplementedMethods){
+						errorMessage += method + "\n";
+					}
+					errorMessage = "The following methods were implemented in the Class \"" + Class.$GetType() + "\" from the Interface \"" + Interface.$GetType() + "\":";
+					for(var method in implementedMethods){
+						errorMessage += method + "\n";
+					}
+					return false;
+				}
+				else{
+					return true;
+				}
 			},
 			TestForProperties : function(Interface,Class){
+				var properties = Interface[_constants["interface_properties_name"]];
+				var implementedProperties = [];
+				var notImplementedProperties = [];
 				
+				for(var property in properties){
+					var isGetImplemented = false;
+					var isSetImplemented = false;
+					var isGetSetImplemented = false;
+					
+					for(var member in Class){
+						var Get = _constants["get_prefix"] + property;
+						var Set = _constants["set_prefix"] + property;
+						
+						if(Get === member){
+							isGetImplemented = true;
+							break;
+						}
+						else if(Set === member){
+							isSetImplemented = true;
+							break;
+						}
+						else if(GetSet === member){
+							isGetImplemented = true;
+							isSetImplemented = true;
+						}
+					}
+					if(!(isGetImplemented && isSetImplemented)){
+						implementedProperties.push(property);
+					}
+					else{
+						notImplementedProperties.push(property);
+					}
+				}
+								
+				if(notImplementedProperties.length === 0){
+					var errorMessage;
+					var interfaceType = Interface.$GetType();
+					var classType = Class.$GetType();
+					
+					errorMessage = "The following properties were not [correctly] implemented in the Class \"" + Class.$GetType() + "\" from the Interface \"" + Interface.$GetType() + "\":\n";
+					for(var property in notImplementedProperties){
+						errorMessage += property + "\n";
+					}
+					errorMessage = "The following properties were implemented in the Class \"" + Class.$GetType() + "\" from the Interface \"" + Interface.$GetType() + "\":";
+					for(var property in implementedProperties){
+						errorMessage += property + "\n";
+					}
+					return false;
+				}
+				else{
+					return true;
+				}
 			},
 			TestForFields : function(Interface,Class){
+				var fields = Interface[_constants["interface_fields_name"]];
+				var implementedFields = [];
+				var notImplementedFields = [];
 				
+				for(var field in fields){
+					var isImplemented = false;
+					for(var member in Class){
+						if(field === member){
+							isImplemented = true;
+							break;
+						}
+					}
+					if(!isImplemented){
+						implementedFields.push(field);
+					}
+					else{
+						notImplementedFields.push(field);
+					}
+				}
+								
+				if(notImplementedFields.length === 0){
+					var errorMessage;
+					var interfaceType = Interface.$GetType();
+					var classType = Class.$GetType();
+					
+					errorMessage = "The following fields were not [correctly] implemented in the Class \"" + Class.$GetType() + "\" from the Interface \"" + Interface.$GetType() + "\":\n";
+					for(var property in notImplementedFields){
+						errorMessage += field + "\n";
+					}
+					errorMessage = "The following fields were implemented in the Class \"" + Class.$GetType() + "\" from the Interface \"" + Interface.$GetType() + "\":";
+					for(var property in implementedFields){
+						errorMessage += field + "\n";
+					}
+					return false;
+				}
+				else{
+					return true;
+				}
 			}
 		}
 		
@@ -482,114 +627,3 @@ var jOO = (function(undefined){
 	};
 	return _jOO();
 })();
-
-var OO;
-var include1, include2;
-var iFace;
-var oClass;
-
-(function(jOO,undefined){
-	jOO.Class({
-		"namespace":"System.Util",
-		"name":"Console",
-		"includes":{
-			"static":[include1,include2,{
-				test : function(){
-					
-				}
-			}],
-			"prototype":[{
-				"empty" : ""
-			}]
-		},
-		"implements":[iFace],
-		"extends": oClass,
-		"properties":[{
-				"name":"Name",
-				"get":true,
-				"set":true
-			},
-			{
-				"name":"Key",
-				"set":true,
-				"get":false
-			},
-			{
-				"name":"Files",
-				"set":function(file){
-					
-				},
-				"get":"files"
-			},
-			{
-				"name":"Chars",
-				"set":function(char){
-				
-				},
-				"get":function(index){
-					
-				}
-		},
-		"values",
-		{
-			"name":"test",
-			"getset":true
-		},
-		{
-			"name":"lookup",
-			"getset":function(lookup){
-				
-			}
-		},
-		{
-			"fields":{
-				"get":true,
-				"set":true
-			}
-		}],
-		"fields":["length"],
-		"methods":{
-			"Write":function(){}
-		},
-		"constants":{
-			"PI":3.14
-		},
-		"constructor":function(){
-			alert("ok!");
-		},
-		"destructor":function(){
-			
-		},
-		"success":function(){
-			
-		},
-		"error":function(){
-			
-		}
-	});
-
-	jOO.Interface({
-		"namespace":"System",
-		"name":"IConsole",
-		"interface":{
-			"methods":["Write"],
-			"fields":["length"],
-			"properties":["name"]
-		},
-		"success":function(){
-			
-		},
-		"error":function(){
-			
-		},
-		"implement":function(){
-			
-		}
-	});
-
-})(jOO);
-
-alert(jOO.root);
-var Console = new jOO.root.System.Util.Console();
-alert(Console.$GetType());
-alert(jOO.root.System.Util.Console.$GetType());
